@@ -1,0 +1,94 @@
+package syncdb
+
+import (
+	"os"
+	"scada/ctable"
+
+	"github.com/astaxie/beego/logs"
+)
+
+//关系库同步
+func init() {
+	app := ctable.GetAppName()
+	for _, s := range os.Args {
+		if s == "-sync" {
+			//需要同步点表
+			ctable.Save2file(MakeRows())
+			os.Exit(0)
+		}
+	}
+
+	n, err := ctable.ConfCount(app)
+	if err != nil {
+		logs.Error("Query configure ", err)
+		return
+	}
+
+	if n == 0 {
+		rows := MakeRows()
+		err = ctable.Sync(rows, app, "das_conf")
+		if err != nil {
+			logs.Error("Query configure ", err)
+		}
+	}
+}
+
+func MakeRows() (rows []*ctable.ConfTable) {
+	rows = make([]*ctable.ConfTable, 0)
+	rs := ctable.AddDefaultPointRows()
+	if rs != nil {
+		rows = append(rows, rs...)
+	}
+
+	row := ctable.AddRow("IEC104 服务器地址", "source_address", "127.0.0.1:2404",
+		"IEC 104的服务器地址,端口默认为2404,多个地址用分号分割", "addServer", "", "")
+	if row != nil {
+		rows = append(rows, row)
+	}
+
+	row = ctable.AddRow("IEC104 数据的读取间隔", "source_interval", "1000",
+		"循环读取一次的间隔时间,单位毫秒", "addServer", "", "")
+	if row != nil {
+		rows = append(rows, row)
+	}
+
+	row = ctable.AddRow("IEC104 公共地址", "iec104_common_address", "1",
+		"IEC104的公共地址,默认为1", "addServer", "", "")
+	if row != nil {
+		rows = append(rows, row)
+	}
+
+	row = ctable.AddRow("开启电度数据采集", "iec104_c_ci_na_enable", "false",
+		"是否开启电度数据采集,false: 不采集电度数据 true:采集电度数据", "addServer", "select", "false|true")
+	if row != nil {
+		rows = append(rows, row)
+	}
+
+	row = ctable.AddRow("电度数据读取间隔", "iec104_c_ci_na_interval", "600",
+		"电度数据采集间隔,单位秒", "addServer", "", "")
+	if row != nil {
+		rows = append(rows, row)
+	}
+
+	rs = ctable.AddDefaultRows()
+	if rs != nil {
+		rows = append(rows, rs...)
+	}
+
+	rs = ctable.AddDefaultSendRows()
+	if rs != nil {
+		rows = append(rows, rs...)
+	}
+
+	rs = ctable.AddDefaultControlRows()
+	if rs != nil {
+		rows = append(rows, rs...)
+	}
+
+	rs = ctable.AddDefaultWebRows()
+	if rs != nil {
+		rows = append(rows, rs...)
+	}
+
+	return
+}
